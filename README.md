@@ -134,7 +134,7 @@ http://localhost:8000/docs
 ```
 
 
-## 💻 Frontend Setup
+## Frontend Setup
 
 1. Navigate to frontend:
 
@@ -161,7 +161,7 @@ http://localhost:3000
 ```
 
 
-# 🔐 Authentication Flow
+#  Authentication Flow
 
 1. User registers
 2. User logs in
