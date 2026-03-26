@@ -371,7 +371,7 @@ Backend flow:
 * Fetch user from database
 * Attach user to request
 
-## 📝 4. Create Task Flow
+## 4. Create Task Flow
 
 1. User clicks "Create Task"
 2. Fills:
