@@ -175,11 +175,11 @@ http://localhost:5173
 5. Token Expiration & Refresh: If a request fails with a 401 Unauthorized, the Axios interceptor pauses the request, automatically calls /users/refresh (sending the HttpOnly cookie), retrieves a new access_token, updates localStorage, and seamlessly retries the original failed request.
 
 
-# 🔑 API Documentation
+#  API Documentation
 
 ---
 
-## 👤 User APIs
+##  User APIs
 
 ### 1. Register User
 
@@ -331,7 +331,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-## 📝 Task APIs
+##  Task APIs
 
 ### 1. Create Task
 
