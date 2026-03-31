@@ -2,22 +2,22 @@
 
 A production-ready **Task Management System** built using **FastAPI (Backend)** and **React (Frontend)** with JWT Authentication.
 
+# Features
 
-#  Features
+### Authentication & Security
+    
+  1. User Registration
+  2. User Login (JWT access tokens & HttpOnly refresh tokens)
+  3. Silent Token Refresh via Axios Interceptors
+  4. Secure password hashing (bcrypt)
+  5. Role-Based Access Control (Admin vs. User)
+  6. Protected application routes and API endpoints
 
-##  Authentication
+### Task Management
 
-* User Registration
-* User Login (JWT authentication)
-* Secure password hashing (bcrypt)
-* Protected routes (frontend + backend)
-
-##  Task Management
-
-* Create Task
-* Update Task
-* Delete Task
-* View all tasks (user-specific)
+  1. Create, Update, and Delete Tasks
+  2. View user-specific tasks
+  3. Admin override capabilities (manage all tasks/users based on role)
 
 ##  Tech Stack
 
@@ -35,6 +35,7 @@ A production-ready **Task Management System** built using **FastAPI (Backend)** 
 * React Router
 * Axios
 * Context API (Auth Management)
+* jwt-decode (Client-side role and token parsing)
 
 
 #  Project Structure
@@ -70,12 +71,15 @@ frontend/
 │   │   └── tasks.js
 │   │
 │   ├── components/
-│   │   └── TaskForm.jsx
+│   │   ├── TaskForm.jsx
+│   │   ├── PrivateRoute.jsx
+│   │   └── AdminRoute.jsx
 │   │
 │   ├── pages/
 │   │   ├── LoginPage.jsx
 │   │   ├── RegisterPage.jsx
-│   │   └── Dashboard.jsx
+│   │   ├── Dashboard.jsx
+│   │   └── UserManagement.jsx
 │   │
 │   ├── context/
 │   │   ├── AuthContext.jsx
@@ -83,6 +87,7 @@ frontend/
 │   │
 │   ├── App.jsx
 │   └── index.js
+
 ```
 
 
@@ -157,107 +162,305 @@ npm start
 4. Open app:
 
 ```
-http://localhost:3000
+http://localhost:5173
 ```
 
 
 #  Authentication Flow
 
-1. User registers
-2. User logs in
-3. Backend returns JWT token
-4. Token stored in localStorage
-5. Axios interceptor attaches token to every request
-6. Protected APIs validate token using FastAPI dependency
+1. Initial Login: User logs in. Backend validates credentials.
+2. Token Issuance: Backend returns a short-lived access_token in the JSON response and sets a long-lived refresh_token inside a secure, HttpOnly cookie.
+3. Storage & State: Frontend stores the access_token in localStorage and decodes it to determine the user's role (admin or user). The refresh_token is handled automatically by the browser.
+4. Standard Requests: Axios interceptor attaches the access_token (Bearer <token>) to every outgoing API request.
+5. Token Expiration & Refresh: If a request fails with a 401 Unauthorized, the Axios interceptor pauses the request, automatically calls /users/refresh (sending the HttpOnly cookie), retrieves a new access_token, updates localStorage, and seamlessly retries the original failed request.
 
 
-#  API Endpoints
+# 🔑 API Documentation
 
-##  User APIs
+---
 
-### 1.Register User
+## 👤 User APIs
 
-```
+### 1. Register User
+
+Creates a new user account.
+
+**HTTP**
 POST /users/register
-```
 
-Body:
+**Request Body (JSON)**
 
-```
+```json
 {
-  "name": "John",
-  "email": "john@example.com",
-  "password": "123456"
+  "name": "abc",
+  "email": "abc@example.com",
+  "password": "securepassword123",
+  "role": "user"
 }
 ```
 
+> **Note:** `role` can be `"user"` or `"admin"`
 
-### 2.Login User
+**Response (200 OK)**
 
-```
-POST /users/login
-```
-
-Body (form-data):
-
-```
-username: email
-password: password
-```
-
-Response:
-
-```
+```json
 {
-  "access_token": "JWT_TOKEN",
+  "id": 1,
+  "name": "abc",
+  "email": "abc@example.com",
+  "role": "user"
+}
+```
+
+---
+
+### 2. Login User
+
+Authenticates the user, returns an access token, and sets a refresh token in an HttpOnly cookie.
+
+**HTTP**
+POST /users/login
+
+**Request Body (x-www-form-urlencoded)**
+
+```
+username: abc@example.com
+password: securepassword123
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5c...",
   "token_type": "bearer"
 }
 ```
 
-
-##  Task APIs
-
-### 1.Create Task
+> **Note:** Server also sends:
 
 ```
-POST /tasks
+Set-Cookie: refresh_token=...; HttpOnly;
 ```
 
-Headers:
+---
+
+### 3. Refresh Token
+
+Generates a new access token using the refresh token stored in cookies.
+
+**HTTP**
+POST /users/refresh
+
+**Headers**
 
 ```
-Authorization: Bearer <token>
+Cookie: refresh_token=...
 ```
 
-Body:
+*(Handled automatically when `withCredentials: true` is enabled)*
 
-```
+**Request Body**
+(empty)
+
+**Response (200 OK)**
+
+```json
 {
-  "title": "Task 1",
-  "description": "Some description",
-  "status": "Pending"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5c_NEW_TOKEN...",
+  "token_type": "bearer"
 }
 ```
 
-###  2.Get All Tasks
+---
+
+### 4. Get All Users (Admin Only)
+
+Fetches all registered users.
+
+**HTTP**
+GET /users/
+
+**Headers**
 
 ```
-GET /tasks
+Authorization: Bearer <access_token>
 ```
 
+**Response (200 OK)**
 
-### 3.Update Task
+```json
+[
+  {
+    "id": 1,
+    "name": "abc",
+    "email": "abc@example.com",
+    "role": "admin"
+  },
+  {
+    "id": 2,
+    "name": "Ankit",
+    "email": "ankit@example.com",
+    "role": "user"
+  }
+]
+```
+
+---
+
+### 5. Delete User (Admin Only)
+
+Deletes a user.
+
+**HTTP**
+DELETE /users/{id}
+
+**Headers**
 
 ```
+Authorization: Bearer <access_token>
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "detail": "User deleted"
+}
+```
+
+---
+
+## 📝 Task APIs
+
+### 1. Create Task
+
+Creates a new task for the authenticated user.
+
+**HTTP**
+POST /tasks/
+
+**Headers**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body (JSON)**
+
+```json
+{
+  "title": "Setup PostgreSQL",
+  "description": "Configure the local database and run Alembic migrations",
+  "status": "In Progress"
+}
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "id": 1,
+  "title": "Setup PostgreSQL",
+  "description": "Configure the local database and run Alembic migrations",
+  "status": "In Progress",
+  "owner_id": 1
+}
+```
+
+---
+
+### 2. Get User Tasks
+
+Fetches all tasks of the logged-in user.
+
+**HTTP**
+GET /tasks/
+
+**Headers**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Response (200 OK)**
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Setup PostgreSQL",
+    "description": "Configure the local database and run Alembic migrations",
+    "status": "In Progress",
+    "owner_id": 1
+  }
+]
+```
+
+---
+
+### 3. Update Task
+
+Updates an existing task.
+
+> Users can update only their tasks unless they are admin.
+
+**HTTP**
 PUT /tasks/{id}
-```
 
-
-### 4.Delete Task
+**Headers**
 
 ```
+Authorization: Bearer <access_token>
+```
+
+**Request Body (JSON)** *(partial update allowed)*
+
+```json
+{
+  "status": "Completed"
+}
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "id": 1,
+  "title": "Setup PostgreSQL",
+  "description": "Configure the local database and run Alembic migrations",
+  "status": "Completed",
+  "owner_id": 1
+}
+```
+
+---
+
+### 4. Delete Task
+
+Deletes a task.
+
+> Only the owner or admin can delete.
+
+**HTTP**
 DELETE /tasks/{id}
+
+**Headers**
+
 ```
+Authorization: Bearer <access_token>
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "detail": "Task deleted successfully"
+}
+```
+
+---
+
 
 
 #  Key Concepts Implemented
@@ -268,260 +471,10 @@ DELETE /tasks/{id}
 * Password Hashing (bcrypt)
 * React Context API
 * Axios Interceptors
+* Refresh token
+* Role-based access
+* Access token
 * Protected Routes
-
-#  Complete Application Flow
-
-## 1. User Registration Flow
-
-1. User enters:
-
-   * Name
-   * Email
-   * Password
-
-2. Frontend sends request:
-
-```
-POST /users/register
-```
-
-Request Body:
-
-```json
-{
-  "name": "John",
-  "email": "john@example.com",
-  "password": "123456"
-}
-```
-
-3. Backend:
-
-* Checks if email already exists
-* Hashes password using bcrypt
-* Stores user in database
-
-4. Response:
-
-```json
-{
-  "id": 1,
-  "name": "John",
-  "email": "john@example.com"
-}
-```
-
-## 2. User Login Flow
-
-1. User enters:
-
-* Email
-* Password
-
-2. Frontend sends (form-data):
-
-```
-POST /users/login
-```
-
-Request Body (x-www-form-urlencoded):
-
-```
-username=john@example.com
-password=123456
-```
-
-3. Backend:
-
-* Verifies user exists
-* Verifies password (hashed)
-* Generates JWT token
-
-4. Response:
-
-```json
-{
-  "access_token": "JWT_TOKEN",
-  "token_type": "bearer"
-}
-```
-
-5. Frontend:
-
-* Stores token in localStorage
-* Updates auth state
-* Redirects to dashboard
-
-
-## 3. Authentication Mechanism
-
-Every protected request includes:
-
-```
-Authorization: Bearer <token>
-```
-
-Backend flow:
-
-* Extract token using OAuth2PasswordBearer
-* Decode JWT
-* Extract user email (`sub`)
-* Fetch user from database
-* Attach user to request
-
-## 4. Create Task Flow
-
-1. User clicks "Create Task"
-2. Fills:
-
-* Title
-* Description
-* Status
-
-3. Frontend sends:
-
-```
-POST /tasks
-```
-
-Headers:
-
-```
-Authorization: Bearer <token>
-```
-
-Request Body:
-
-```json
-{
-  "title": "Task 1",
-  "description": "Some description",
-  "status": "Pending"
-}
-```
-
-4. Backend:
-
-* Validates user via token
-* Creates task with `user_id`
-* Saves to database
-
-5. Response:
-
-```json
-{
-  "id": 1,
-  "title": "Task 1",
-  "description": "Some description",
-  "status": "Pending",
-  "user_id": 1
-}
-```
-
-## 5. Get Tasks Flow
-
-1. Dashboard loads
-2. Frontend sends:
-
-```
-GET /tasks
-```
-
-Headers:
-
-```
-Authorization: Bearer <token>
-```
-
-3. Backend:
-
-* Identifies current user
-* Returns only that user’s tasks
-
-Response:
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Task 1",
-    "description": "Some description",
-    "status": "Pending"
-  }
-]
-```
-## 6. Update Task Flow
-
-1. User edits a task
-2. Frontend sends:
-
-```
-PUT /tasks/{id}
-```
-
-Headers:
-
-```
-Authorization: Bearer <token>
-```
-
-Request Body:
-
-```json
-{
-  "title": "Updated Task",
-  "description": "Updated description",
-  "status": "Completed"
-}
-```
-
-3. Backend:
-
-* Verifies task belongs to user
-* Updates task
-
-## 7. Delete Task Flow
-
-1. User clicks delete
-2. Frontend sends:
-
-```
-DELETE /tasks/{id}
-```
-
-Headers:
-
-```
-Authorization: Bearer <token>
-```
-
-3. Backend:
-
-* Verifies ownership
-* Deletes task
-
-Response:
-
-```json
-{
-  "message": "Task deleted successfully"
-}
-```
-
-## 8. Frontend State Flow
-
-* Token stored in localStorage
-* Auth state managed using Context API
-* Tasks stored in component state
-* UI updates after API calls
-
-## 9. Session Persistence
-
-* On page refresh:
-
-  * Token is read from localStorage
-  * User remains logged in
 
 
 ##  Overall Architecture Flow
@@ -560,10 +513,9 @@ Fix: Ensure token is sent
 
 # Future Improvements
 
-* Refresh Tokens
-* Role-based access
-* Pagination & Filtering
-* Deployment (Docker + Cloud)
+  * Database schema migrations using Alembic
+  * Pagination & Filtering
+  * Deployment (Docker + Cloud)
 
 #  Conclusion
 
