@@ -1,7 +1,6 @@
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from key import SECRET_KEY
 from database import get_db, SessionLocal
 from sqlalchemy.orm import Session
 
@@ -16,6 +15,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/users/login')
 
@@ -25,6 +25,12 @@ def create_token(data: dict):
     payload.update({"exp":expire})
     encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def create_refresh_token(data: dict):
+    payload = data.copy()
+    expire = datetime.now(timezone.utc)+timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    payload.update({"exp": expire})
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -44,3 +50,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             )
    
     return user
+
+def require_role(required_role: str):
+    def role_checker(current_user: models.User = Depends(get_current_user)):
+        if current_user.role != required_role:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+    return role_checker

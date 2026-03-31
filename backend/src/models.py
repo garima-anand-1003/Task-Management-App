@@ -9,6 +9,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True)
     password = Column(String, nullable=False)
+    role = Column(String, default="user")
     
     tasks= relationship("Task", back_populates="owner")
 

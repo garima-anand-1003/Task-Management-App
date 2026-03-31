@@ -239,8 +239,7 @@ Body:
 }
 ```
 
-
-### 2.Get All Tasks
+###  2.Get All Tasks
 
 ```
 GET /tasks
