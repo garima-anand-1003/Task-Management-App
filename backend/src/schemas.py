@@ -5,6 +5,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role: Optional[str] = "users"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -34,7 +35,7 @@ class TaskOut(BaseModel):
     title: str
     description: Optional[str]
     status: str
-    owner_id: int
+    owner_id: Optional[int]
 
     class Config:
         from_attributes = True

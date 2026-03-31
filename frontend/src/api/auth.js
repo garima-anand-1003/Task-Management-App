@@ -4,10 +4,10 @@ export const registerUser = (data) => {
   return api.post("/users/register", data);
 };
 
-export const loginUser = (email, password) => {
+export const loginUserApi = (data) => {
   const formData = new URLSearchParams();
-  formData.append("username", email);   
-  formData.append("password", password);
+  formData.append("username", data.email);   
+  formData.append("password", data.password);
 
   return api.post("/users/login", formData, {
     headers: {

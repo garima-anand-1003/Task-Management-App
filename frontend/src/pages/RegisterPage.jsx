@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [error,    setError]    = useState("")
   const [loading,  setLoading]  = useState(false)
+  const [role,     setRole]     = useState("user")
 
   const navigate = useNavigate()
 
@@ -17,7 +18,7 @@ export default function RegisterPage() {
     setLoading(true)      
 
     try {
-      await registerUser({ name, email, password })
+      await registerUser({ name, email, password,role})
       navigate("/login")
     } catch (err) {
       const msg = err.response?.data?.detail || "Registration failed"
@@ -64,6 +65,18 @@ export default function RegisterPage() {
             required
             style={{ display: "block", width: "100%", padding: "8px", marginTop: "4px" }}
           />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label>Select Role</label>
+          <select 
+            value={role} 
+            onChange={(e) => setRole(e.target.value)}
+            style={{ display: "block", width: "100%", padding: "8px", marginTop: "4px" }}
+          >
+            <option value="user">Standard User</option>
+            <option value="admin">Administrator</option>
+          </select>
         </div>
 
         {error && (

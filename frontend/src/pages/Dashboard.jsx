@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "../context/useAuth"
 import { getTasks, deleteTask } from "../api/tasks"
 import TaskForm from "../components/TaskForm"
+import { Link } from "react-router-dom"
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([])
@@ -12,7 +13,8 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState(null)
   const [activeFilter, setActiveFilter] = useState("All")
 
-  const { logout } = useAuth()
+  // EXTRACT user (for RBAC) alongside logout
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     loadTasks()
@@ -20,9 +22,11 @@ export default function Dashboard() {
 
   const loadTasks = async () => {
     try {
-         setLoading(true)
+      setLoading(true)
       const res = await getTasks()
-      setTasks(res.data)
+      // If the backend returns the array directly, it's just res.
+      // If it wraps it in an object, it's res.data. Adjust if your getTasks() returns data directly.
+      setTasks(res.data || res) 
     } catch {
       setError("Failed to load tasks")
     } finally {
@@ -47,11 +51,13 @@ export default function Dashboard() {
 
   const handleDelete = async (id) => {
     try {
-        await deleteTask(id)
+      await deleteTask(id)
       setTasks(tasks.filter(t => t.id !== id))
       setDeletingId(null)   // close confirmation
-    } catch {
-      alert("Delete failed")
+    } catch (err) {
+      // Improved error message to handle backend 403 Forbidden errors
+      alert(err.response?.data?.detail || "Delete failed. You may not have permission.")
+      setDeletingId(null)
     }
   }
 
@@ -70,10 +76,25 @@ export default function Dashboard() {
   return (
     <div style={{ maxWidth: "700px", margin: "0 auto", padding: "24px 20px" }}>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "24px", alignItems: "center" }}>
         <h2>TaskFlow</h2>
-        <button onClick={logout}>Logout</button>
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          {/* RBAC CHECK: Show Admin Panel link only to admins */}
+          {user?.role === "admin" && (
+            <Link to="/admin/users" style={{ color: "#1D9E75", textDecoration: "none", fontWeight: "600" }}>
+              ⚙️ Manage Users
+            </Link>
+          )}
+          <button onClick={logout}>Logout</button>
+        </div>
       </div>
+
+      {/* RBAC CHECK: Show a banner so the admin knows they are seeing global tasks */}
+      {user?.role === "admin" && (
+        <div style={{ marginBottom: "20px", padding: "10px", background: "#d4edda", color: "#155724", borderRadius: "8px", fontSize: "14px" }}>
+          <strong>Admin Privilege Active:</strong> Viewing global tasks.
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px", marginBottom: "20px" }}>
         {[
@@ -93,7 +114,7 @@ export default function Dashboard() {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <h3>My Tasks</h3>
+        <h3>{user?.role === "admin" ? "All System Tasks" : "My Tasks"}</h3>
         <button onClick={() => { setEditingTask(null); setShowForm(true) }}>
           + New Task
         </button>
@@ -132,9 +153,17 @@ export default function Dashboard() {
             }}>
 
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: "500" }}>{task.title}</div>
+              <div style={{ fontWeight: "500", display: "flex", alignItems: "center", gap: "8px" }}>
+                {task.title}
+                {/* RBAC CHECK: Show the owner ID if the user is an admin */}
+                {user?.role === "admin" && (
+                  <span style={{ fontSize: "10px", background: "#eee", padding: "2px 6px", borderRadius: "4px", color: "#666" }}>
+                    Owner ID: {task.owner_id || task.user_id}
+                  </span>
+                )}
+              </div>
               {task.description && (
-                 <div style={{ fontSize: "12px", color: "#888" }}>
+                 <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>
                   {task.description}
                 </div>
               )}
@@ -152,11 +181,17 @@ export default function Dashboard() {
               {task.status}
             </span>
 
-            <button onClick={() => handleEdit(task)}>✎</button>
+            {/* Note: In a strict system, you might hide Edit/Delete for tasks the user doesn't own. 
+                But since Admins CAN edit/delete everything, and standard users only see their own tasks, 
+                we can leave these buttons visible. The backend will block any hacking attempts. */}
+            <button 
+              onClick={() => handleEdit(task)}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px" }}
+            >✎</button>
 
             <button
               onClick={() => setDeletingId(task.id)}
-              style={{ color: "red" }}
+              style={{ color: "red", background: "none", border: "none", cursor: "pointer", fontSize: "16px" }}
             >✕</button>
 
           </div>
@@ -182,7 +217,7 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={() => setDeletingId(null)}
-                style={{ flex: 1, padding: "8px", cursor: "pointer" }}
+                style={{ flex: 1, padding: "8px", cursor: "pointer", border: "1px solid #ccc", background: "white", borderRadius: "6px" }}
               >
                 Cancel
               </button>
