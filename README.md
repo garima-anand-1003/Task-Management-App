@@ -95,81 +95,81 @@ frontend/
 
 ##  Backend Setup
 
-1. Navigate to backend folder:
+  1. Navigate to backend folder:
 
-```
-cd backend
-```
+      ```
+      cd backend
+      ```
 
-2. Create virtual environment:
+  2. Create virtual environment:
 
-```
-python -m venv venv
-```
+      ```
+      python -m venv venv
+      ```
 
-3. Activate virtual environment:
+  3. Activate virtual environment:
 
-```
-venv\Scripts\activate   (Windows)
-source venv/bin/activate (Mac/Linux)
-```
+      ```
+      venv\Scripts\activate   (Windows)
+      source venv/bin/activate (Mac/Linux)
+      ```
 
-4. Install dependencies:
+  4. Install dependencies:
 
-```
-pip install -r requirements.txt
-```
+      ```
+      pip install -r requirements.txt
+      ```
 
-5. Create `.env` file:
+  5. Create `.env` file:
 
-```
-SECRET_KEY=your_secret_key_here
-```
+      ```
+      SECRET_KEY=your_secret_key_here
+      ```
 
-6. Run server:
+  6. Run server:
 
-```
-uvicorn main:app --reload
-```
+      ```
+      uvicorn main:app --reload
+      ```
 
-7. Open Swagger Docs:
+  7. Open Swagger Docs:
 
-```
-http://localhost:8000/docs
-```
+      ```
+      http://localhost:8000/docs
+      ```
 
 
 ## Frontend Setup
 
-1. Navigate to frontend:
+  1. Navigate to frontend:
 
-```
-cd frontend
-```
+      ```
+      cd frontend
+      ```
 
-2. Install dependencies:
+  2. Install dependencies:
 
-```
-npm install
-```
+      ```
+      npm install
+      ```
 
-3. Run frontend:
+  3. Run frontend:
 
-```
-npm start
-```
+      ```
+      npm start
+      ```
 
-4. Open app:
+  4. Open app:
 
-```
-http://localhost:5173
-```
+      ```
+      http://localhost:5173
+      ```
 
 
 #  Authentication Flow
 
 1. Initial Login: User logs in. Backend validates credentials.
-2. Token Issuance: Backend returns a short-lived access_token in the JSON response and sets a long-lived refresh_token inside a secure, HttpOnly cookie.
+2. Token Issuance: Backend returns a short-lived access_token in the JSON response and sets a long-lived refresh_token inside HttpOnly cookie.
 3. Storage & State: Frontend stores the access_token in localStorage and decodes it to determine the user's role (admin or user). The refresh_token is handled automatically by the browser.
 4. Standard Requests: Axios interceptor attaches the access_token (Bearer <token>) to every outgoing API request.
 5. Token Expiration & Refresh: If a request fails with a 401 Unauthorized, the Axios interceptor pauses the request, automatically calls /users/refresh (sending the HttpOnly cookie), retrieves a new access_token, updates localStorage, and seamlessly retries the original failed request.
@@ -177,7 +177,6 @@ http://localhost:5173
 
 #  API Documentation
 
----
 
 ##  User APIs
 
@@ -212,7 +211,7 @@ POST /users/register
 }
 ```
 
----
+
 
 ### 2. Login User
 
@@ -243,7 +242,7 @@ password: securepassword123
 Set-Cookie: refresh_token=...; HttpOnly;
 ```
 
----
+
 
 ### 3. Refresh Token
 
@@ -272,7 +271,7 @@ Cookie: refresh_token=...
 }
 ```
 
----
+
 
 ### 4. Get All Users (Admin Only)
 
@@ -306,7 +305,7 @@ Authorization: Bearer <access_token>
 ]
 ```
 
----
+
 
 ### 5. Delete User (Admin Only)
 
@@ -329,7 +328,7 @@ Authorization: Bearer <access_token>
 }
 ```
 
----
+
 
 ##  Task APIs
 
@@ -368,7 +367,7 @@ Authorization: Bearer <access_token>
 }
 ```
 
----
+
 
 ### 2. Get User Tasks
 
@@ -397,7 +396,7 @@ Authorization: Bearer <access_token>
 ]
 ```
 
----
+
 
 ### 3. Update Task
 
@@ -434,7 +433,7 @@ Authorization: Bearer <access_token>
 }
 ```
 
----
+
 
 ### 4. Delete Task
 
@@ -459,7 +458,7 @@ Authorization: Bearer <access_token>
 }
 ```
 
----
+
 
 
 
@@ -513,7 +512,6 @@ Fix: Ensure token is sent
 
 # Future Improvements
 
-  * Database schema migrations using Alembic
   * Pagination & Filtering
   * Deployment (Docker + Cloud)
 
