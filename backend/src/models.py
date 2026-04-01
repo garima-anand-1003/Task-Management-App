@@ -11,6 +11,7 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, default="user")
     
+    
     tasks= relationship("Task", back_populates="owner")
 
 class Task(Base):
