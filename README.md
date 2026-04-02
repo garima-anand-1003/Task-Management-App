@@ -12,6 +12,9 @@ A production-ready **Task Management System** built using **FastAPI (Backend)** 
   4. Secure password hashing (bcrypt)
   5. Role-Based Access Control (Admin vs. User)
   6. Protected application routes and API endpoints
+  7. **Dual Authentication System:**
+      * Standard Email/Password login (hashed via bcrypt).
+      * "Sign in with Google" (OAuth 2.0 flow).
 
 ### Task Management
 
@@ -459,7 +462,12 @@ Authorization: Bearer <access_token>
 ```
 
 
-
+### Google OAuth Setup
+To use the "Sign in with Google" feature, you must create a project in the [Google Cloud Console](https://console.cloud.google.com/):
+1. Configure the **OAuth Consent Screen** (External, add test users).
+2. Create **OAuth Client ID** credentials (Web Application).
+3. Set Authorized JavaScript origins to: `http://localhost:5173`
+4. Set Authorized redirect URIs to: `http://localhost:5173/auth/callback`
 
 
 #  Key Concepts Implemented
