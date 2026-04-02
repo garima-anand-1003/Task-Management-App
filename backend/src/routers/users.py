@@ -8,11 +8,81 @@ from auth import ALGORITHM, get_current_user, create_token
 import os 
 from dotenv import load_dotenv
 
+import httpx
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 router = APIRouter(prefix='/users', tags=["Users"])
+
+
+@router.post('/auth/google')
+async def google_auth(request: schemas.GoogleAuthRequest, response: Response, db: Session = Depends(get_db)):
+    #1. We send the code, our ID, and our Secret to Google.
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": request.code,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "redirect_uri": "http://localhost:5173/auth/callback",
+        "grant_type": "authorization_code"
+    }
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        google_response = await client.post(token_url, data=data)
+        token_data = google_response.json()
+    
+    if "access_token" not in token_data:
+        raise HTTPException(status_code=400, detail="Invalid Google authentication code")
+    
+    google_access_token = token_data["access_token"]
+    
+    #2. Use Googles access token to get user info(email & name) from Google
+    user_info_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+    headers = {"Authorization": f"Bearer {google_access_token}"}
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        user_info_response = await client.get(user_info_url, headers=headers)
+        user_info = user_info_response.json()
+    
+    email = user_info.get("email")
+    name = user_info.get("name")
+    
+    # Check if this Google user is already in our Task Manager database
+    user = db.query(models.User).filter(models.User.email == email).first()
+    
+    if not user:
+        # They don't have a local password, so we hash a random impossible string.
+        random_password = utils.hash_password(os.urandom(32).hex())
+        user = models.User(
+            name = name,
+            email = email,
+            password = random_password,
+            role = "users"    # Default role
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    #3. We create a JWT token for them to use in our Task Manager app
+    access_token = auth.create_token(data={"sub": user.email, "role": user.role})
+    refresh_token = auth.create_refresh_token(data={"sub": user.email})
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,     
+        samesite="lax"
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
 
 @router.post('/register', response_model= schemas.UserOut)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
