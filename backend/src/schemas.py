@@ -1,6 +1,9 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
+class GoogleAuthRequest(BaseModel):
+    code: str
+
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
